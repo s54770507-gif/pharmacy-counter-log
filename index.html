@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#EEF1EC">
+<title>櫃台推薦紀錄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 單手操作的櫃台計數器：上方今日計數，中間大按鈕表單，底部固定「記錄」鍵 */
+:root{
+  --bg:#EEF1EC; --surface:#FFFFFF; --ink:#18241F; --muted:#5E6B64; --line:#D5DCD5;
+  --accent:#2D6A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBE3;
+  --warn:#B4532A; --warn-soft:#F6E2D8; --gold:#B88A1E;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:12px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#111816; --surface:#1A2420; --ink:#E6EDE8; --muted:#94A39B; --line:#2C3A34;
+  --accent:#5FB394; --accent-ink:#0E1714; --accent-soft:#1F3A30;
+  --warn:#E38B63; --warn-soft:#3A2419; --gold:#D9AE45; color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg);margin:0}
+body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:12px 120px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:6px 12px}
+header.top h1{margin:0;font-size:18px;font-weight:900;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+header.top .date{color:var(--muted);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sync{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.sync.wait{background:var(--warn-soft);color:var(--warn)}
+.gear{border:0;background:none;color:var(--muted);font-size:13px;padding:2px 4px;text-decoration:underline}
+.tally{display:flex;gap:14px;text-align:right}
+.tally div{display:flex;flex-direction:column;line-height:1.1}
+.tally b{font-family:var(--f-num);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.tally span{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.tally .rate b{color:var(--accent)}
+
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:14px}
+.tabs button{border:0;background:none;padding:8px;border-radius:999px;font-weight:700;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+
+.group{margin-bottom:14px}
+.group h2{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
+.group h2 em{font-style:normal;font-weight:500;letter-spacing:0;font-size:11px}
+.chips{display:grid;gap:6px}
+.c2{grid-template-columns:repeat(2,1fr)}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c4{grid-template-columns:repeat(4,1fr)}
+.chip{min-height:48px;border:1.5px solid var(--line);background:var(--surface);border-radius:10px;font-size:15px;font-weight:500;padding:6px 4px}
+.chip.big{min-height:56px;font-size:18px;font-weight:700}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.chip.quiet{color:var(--muted)}
+.chip.quiet[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.res .chip[data-v="no"][aria-pressed="true"]{background:var(--warn);border-color:var(--warn)}
+.res .chip[data-v="skip"][aria-pressed="true"]{background:var(--muted);border-color:var(--muted)}
+.reasonbox{border-left:3px solid var(--warn);padding-left:10px}
+
+.savebar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.savebar .in{max-width:528px;margin:0 auto;display:flex;gap:8px}
+.save{flex:1;min-height:56px;border:0;border-radius:14px;background:var(--ink);color:var(--bg);font-size:18px;font-weight:900;letter-spacing:.1em}
+.save:disabled{opacity:.35;cursor:default}
+.clear{min-height:56px;padding:0 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--muted);font-weight:700}
+
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px}
+.row:first-child{border-top:0}
+.row .t{font-family:var(--f-num);color:var(--muted);font-size:13px;width:44px;flex:none}
+.row .d{flex:1;min-width:0}
+.row .d small{color:var(--muted)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:4px}
+.p-yes{background:var(--accent);color:var(--accent-ink)}
+.p-maybe{background:var(--accent-soft);color:var(--ink)}
+.p-no{background:var(--warn-soft);color:var(--warn)}
+.p-skip{background:var(--line);color:var(--muted)}
+.del{border:0;background:none;color:var(--muted);font-size:13px;padding:6px 4px;flex:none}
+.del.armed{color:var(--warn);font-weight:700}
+.empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
+.sect{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--muted);margin:22px 0 6px}
+
+.range{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.range button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 0;font-weight:700;color:var(--muted)}
+.range button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.kpi b{display:block;font-family:var(--f-num);font-size:24px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.hl b{color:var(--accent)}
+.note{font-size:12px;color:var(--muted);margin:0 0 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-top:12px}
+.card h3{margin:0 0 8px;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h3 small{font-weight:500;font-size:11px;color:var(--muted)}
+.bar{display:grid;grid-template-columns:5.2em 1fr 3.2em 3.4em;align-items:center;gap:8px;font-size:13px;padding:3px 0}
+.bar .lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .track{height:12px;background:var(--bg);border-radius:3px;overflow:hidden}
+.bar .fill{display:block;height:100%;background:var(--accent);border-radius:3px}
+.bar .fill.w{background:var(--warn)}
+.bar .n,.bar .pct{font-family:var(--f-num);font-variant-numeric:tabular-nums;text-align:right}
+.bar .pct{color:var(--accent);font-weight:600}
+.bar .pct.na{color:var(--muted);font-weight:400}
+.sheetlink{display:block;text-align:center;margin-top:16px;padding:12px;border:1.5px solid var(--ink);border-radius:12px;font-weight:700;color:var(--ink);text-decoration:none}
+
+.setup{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px}
+.setup h2{margin:0;font-size:17px}
+.setup p{margin:0;font-size:13px;color:var(--muted)}
+.setup label{display:grid;gap:4px;font-size:13px;font-weight:700}
+.setup input{min-height:44px;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0;width:100%}
+.setup .msg{font-size:13px;color:var(--warn);min-height:1.2em}
+.setup .btns{display:flex;gap:8px}
+.setup .btns .save{min-height:48px;font-size:16px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 8px 10px 16px;border-radius:999px;display:flex;align-items:center;gap:10px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.2);max-width:calc(100% - 32px)}
+.toast button{border:0;background:var(--gold);color:#1a1405;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.chip:active,.save:active{transform:scale(.97)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>櫃台推薦紀錄</h1>
+      <div class="date"><span id="today"></span><span class="sync" id="sync">連線中</span><button class="gear" id="gearBtn">設定</button></div>
+    </div>
+    <div class="tally" aria-label="今日統計">
+      <div><b id="tN">0</b><span>今日客人</span></div>
+      <div><b id="tY">0</b><span>已下載</span></div>
+      <div class="rate"><b id="tR">–</b><span>下載率</span></div>
+    </div>
+  </header>
+
+  <section id="view-setup" hidden>
+    <form class="setup" id="setupForm">
+      <h2>連接 Google 試算表</h2>
+      <p>只需在這支手機設定一次。兩個值都在部署說明（README）裡，不會上傳到 GitHub。</p>
+      <label for="cfgUrl">Apps Script 網址<input id="cfgUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" required></label>
+      <label for="cfgToken">通行碼<input id="cfgToken" type="password" autocomplete="off" required></label>
+      <div class="msg" id="setupMsg"></div>
+      <div class="btns"><button type="button" class="clear" id="setupCancel">取消</button><button class="save" id="setupSave">連線並儲存</button></div>
+    </form>
+  </section>
+
+  <div id="main">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-log" aria-selected="true">記錄</button>
+      <button role="tab" id="tab-stats" aria-selected="false">統計</button>
+    </div>
+
+    <section id="view-log">
+      <div class="group"><h2>性別</h2><div class="chips c2" data-f="g"></div></div>
+      <div class="group"><h2>年齡（目測）</h2><div class="chips c4" data-f="a"></div></div>
+      <div class="group res"><h2>推薦結果</h2><div class="chips c4" data-f="r"></div></div>
+      <div class="group reasonbox" id="reasonGroup" hidden><h2>拒絕原因 <em>沒講就留「沒說明」</em></h2><div class="chips c3" data-f="why"></div></div>
+      <div class="group"><h2>來店目的 <em>可略過</em></h2><div class="chips c4" data-f="p"></div></div>
+
+      <div class="sect">今天的紀錄</div>
+      <div class="list" id="todayList"></div>
+    </section>
+
+    <section id="view-stats" hidden>
+      <div class="range" id="range">
+        <button data-d="1" aria-pressed="true">今天</button>
+        <button data-d="7" aria-pressed="false">近 7 天</button>
+        <button data-d="30" aria-pressed="false">近 30 天</button>
+        <button data-d="0" aria-pressed="false">全部</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b id="sN">0</b><span>接觸客人</span></div>
+        <div class="kpi"><b id="sP">0</b><span>有推薦</span></div>
+        <div class="kpi hl"><b id="sR">–</b><span>下載率</span></div>
+      </div>
+      <p class="note">下載率＝已下載 ÷ 有推薦（不含「未推薦」）。各分組右欄同此算法。</p>
+      <div id="cards"></div>
+      <a class="sheetlink" id="sheetLink" href="#" target="_blank" rel="noopener" hidden>開啟 Google 試算表</a>
+    </section>
+  </div>
+</div>
+
+<div class="savebar" id="savebar">
+  <div class="in">
+    <button class="clear" id="clearBtn">清除</button>
+    <button class="save" id="saveBtn" disabled>記錄</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="undoBtn" hidden>復原</button></div>
+
+<script>
+(function(){
+  const OPTS = {
+    g:[['M','男'],['F','女']],
+    a:[['u20','<20'],['20','20–29'],['30','30–39'],['40','40–49'],['50','50–59'],['60','60–69'],['70','70+']],
+    r:[['yes','已下載'],['maybe','有興趣'],['no','拒絕'],['skip','未推薦']],
+    why:[['none','沒說明'],['time','沒時間'],['app','不想裝App'],['privacy','隱私顧慮'],['need','覺得不需要'],['other','其他']],
+    p:[['none','沒說明'],['rx','處方藥'],['supp','保健品'],['otc','成藥'],['baby','母嬰'],['goods','醫材日用'],['ask','只是詢問']]
+  };
+  const LABEL = {}, REV = {};
+  for (const k in OPTS){ LABEL[k] = Object.fromEntries(OPTS[k]); REV[k] = Object.fromEntries(OPTS[k].map(([v,l]) => [l,v])); }
+  const DEFAULTS = {g:null,a:null,r:null,why:'none',p:'none'};
+  const WD = '日一二三四五六';
+
+  const $ = s => document.querySelector(s);
+  const pad = n => String(n).padStart(2,'0');
+  const keyOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const hm = t => { const d = new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+  const pct = (a,b) => b ? Math.round(a/b*100)+'%' : '–';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const LS = {
+    get(k,d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(_){ return d; } },
+    set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} }
+  };
+
+  let cfg = LS.get('clog.cfg', null);          // {url, token}
+  let items = LS.get('clog.cache', []);        // 畫面上的紀錄（含尚未上傳的）
+  let pending = LS.get('clog.pending', []);    // 待上傳操作 [{op:'add',row}|{op:'delete',id}]
+  let form = {...DEFAULTS}, rangeDays = 1, lastSaved = null, inflight = null, online = false;
+  const persist = () => { LS.set('clog.cache', items); LS.set('clog.pending', pending); };
+
+  const now = new Date();
+  $('#today').textContent = (now.getMonth()+1)+'/'+now.getDate()+'（'+WD[now.getDay()]+'）';
+
+  /* ---------- 與試算表溝通 ---------- */
+  function toRow(x){
+    const d = new Date(x.t);
+    return {id:x.id, ts:String(x.t), date:keyOf(d), time:hm(x.t), wd:WD[d.getDay()],
+      g:LABEL.g[x.g], a:LABEL.a[x.a], r:LABEL.r[x.r], why:x.r==='no' ? LABEL.why[x.why] : '', p:LABEL.p[x.p]};
+  }
+  function fromRow(o){
+    return {id:o.id, t:Number(o.ts), g:REV.g[o.g], a:REV.a[o.a], r:REV.r[o.r], why:REV.why[o.why] || 'none', p:REV.p[o.p] || 'none'};
+  }
+  async function api(action, extra, c){
+    c = c || cfg;
+    const res = await fetch(c.url, {method:'POST', body:JSON.stringify(Object.assign({token:c.token, action}, extra || {}))});
+    let body; try { body = await res.json(); } catch(_){ throw {code:'bad_response'}; }
+    if (!body.ok) throw {code:body.error || 'error'};
+    return body;
+  }
+  function applyPending(list){
+    pending.forEach(op => {
+      if (op.op === 'add' && !list.some(x => x.id === op.row.id)) list.push(fromRow(op.row));
+      if (op.op === 'delete') list = list.filter(x => x.id !== op.id);
+    });
+    return list;
+  }
+  async function sync(){
+    if (!cfg) return;
+    try {
+      const body = await api('list');
+      items = applyPending(body.rows.map(fromRow).filter(x => x.id && x.t));
+      persist(); online = true;
+      if (body.sheetUrl){ $('#sheetLink').href = body.sheetUrl; $('#sheetLink').hidden = false; }
+    } catch(e){
+      online = false;
+      if (e && e.code === 'unauthorized') showSetup('通行碼不對，請重新輸入。');
+    }
+    paintAll(); flush();
+  }
+  let flushing = false;
+  async function flush(){
+    if (flushing || !cfg) return;
+    flushing = true;
+    while (pending.length){
+      const op = pending[0]; inflight = op;
+      try {
+        if (op.op === 'add') await api('add', {row:op.row});
+        else await api('delete', {id:op.id});
+        pending = pending.filter(x => x !== op); persist(); online = true;
+      } catch(e){
+        online = false;
+        if (e && e.code === 'unauthorized') showSetup('通行碼不對，請重新輸入。');
+        break;
+      }
+    }
+    inflight = null; flushing = false; paintSync();
+  }
+  setInterval(() => { if (pending.length) flush(); }, 30000);
+  window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+
+  function addItem(x){ items.push(x); pending.push({op:'add', row:toRow(x)}); persist(); paintAll(); flush(); }
+  function removeItem(id){
+    items = items.filter(x => x.id !== id);
+    const i = pending.findIndex(o => o.op === 'add' && o.row.id === id);
+    if (i >= 0 && pending[i] !== inflight) pending.splice(i, 1);
+    else pending.push({op:'delete', id});
+    persist(); paintAll(); flush();
+  }
+
+  /* ---------- 設定 ---------- */
+  function showSetup(msg){
+    $('#view-setup').hidden = false; $('#main').hidden = true; $('#savebar').hidden = true;
+    $('#setupCancel').hidden = !cfg;
+    if (cfg){ $('#cfgUrl').value = cfg.url; }
+    $('#setupMsg').textContent = msg || '';
+  }
+  function hideSetup(){ $('#view-setup').hidden = true; $('#main').hidden = false; setTab(false); }
+  $('#gearBtn').onclick = () => showSetup();
+  $('#setupCancel').onclick = hideSetup;
+  $('#setupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const c = {url:$('#cfgUrl').value.trim(), token:$('#cfgToken').value.trim()};
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(c.url)){ $('#setupMsg').textContent = '網址格式應為 https://script.google.com/macros/s/…/exec'; return; }
+    $('#setupMsg').textContent = '連線中…'; $('#setupSave').disabled = true;
+    try {
+      await api('list', null, c);
+      cfg = c; LS.set('clog.cfg', cfg); $('#cfgToken').value = '';
+      hideSetup(); sync();
+    } catch(err){
+      $('#setupMsg').textContent = err && err.code === 'unauthorized' ? '通行碼不對。' : '連不上，請確認網址、部署權限設為「任何人」，以及網路。';
+    } finally { $('#setupSave').disabled = false; }
+  });
+
+  /* ---------- 表單 ---------- */
+  document.querySelectorAll('[data-f]').forEach(box => {
+    const f = box.dataset.f;
+    box.innerHTML = OPTS[f].map(([v,l]) =>
+      `<button type="button" class="chip${f==='g'?' big':''}${v==='none'?' quiet':''}" data-v="${v}" aria-pressed="false">${l}</button>`).join('');
+    box.addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      const v = b.dataset.v;
+      if (f === 'why' || f === 'p') form[f] = v;
+      else form[f] = form[f] === v ? null : v;
+      if (f === 'r' && form.r !== 'no') form.why = 'none';
+      paintForm();
+    });
+  });
+  function paintForm(){
+    document.querySelectorAll('[data-f]').forEach(box => {
+      const f = box.dataset.f;
+      box.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(form[f] === b.dataset.v)));
+    });
+    $('#reasonGroup').hidden = form.r !== 'no';
+    $('#saveBtn').disabled = !(cfg && form.g && form.a && form.r);
+  }
+  $('#clearBtn').onclick = () => { form = {...DEFAULTS}; paintForm(); };
+  $('#saveBtn').onclick = () => {
+    if ($('#saveBtn').disabled) return;
+    const t = Date.now();
+    const x = {id:t.toString(36)+Math.random().toString(36).slice(2,6), t, g:form.g, a:form.a, r:form.r,
+               why:form.r === 'no' ? form.why : 'none', p:form.p};
+    addItem(x);
+    lastSaved = x.id;
+    form = {...DEFAULTS}; paintForm();
+    window.scrollTo({top:0, behavior:'smooth'});
+    const n = items.filter(i => keyOf(new Date(i.t)) === keyOf(new Date())).length;
+    showToast('已記錄　今天第 '+n+' 位', true);
+  };
+
+  let toastTimer;
+  function showToast(msg, undo){
+    $('#toastMsg').textContent = msg; $('#undoBtn').hidden = !undo; $('#toast').hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('#toast').hidden = true; lastSaved = null; }, 5000);
+  }
+  $('#undoBtn').onclick = () => {
+    if (!lastSaved) return; removeItem(lastSaved); lastSaved = null; showToast('已復原', false);
+  };
+
+  /* ---------- 畫面 ---------- */
+  function paintSync(){
+    const el = $('#sync');
+    if (!cfg){ el.textContent = '未設定'; el.className = 'sync wait'; return; }
+    if (pending.length){ el.textContent = pending.length+' 筆待上傳'; el.className = 'sync wait'; }
+    else if (!online){ el.textContent = '離線'; el.className = 'sync wait'; }
+    else { el.textContent = '已同步'; el.className = 'sync'; }
+  }
+  function paintToday(){
+    const today = keyOf(new Date());
+    const list = items.filter(x => keyOf(new Date(x.t)) === today).sort((a,b) => b.t - a.t);
+    const y = list.filter(x => x.r === 'yes').length, rec = list.filter(x => x.r !== 'skip').length;
+    $('#tN').textContent = list.length; $('#tY').textContent = y; $('#tR').textContent = pct(y, rec);
+    if (!list.length){ $('#todayList').innerHTML = '<div class="empty">還沒有紀錄。選好性別、年齡、推薦結果，按下方「記錄」即可。</div>'; return; }
+    $('#todayList').innerHTML = list.map(x => {
+      const extra = [x.r==='no' && x.why!=='none' ? LABEL.why[x.why] : '', x.p!=='none' ? LABEL.p[x.p] : ''].filter(Boolean).join('・');
+      return `<div class="row"><span class="t">${hm(x.t)}</span>
+        <span class="d">${LABEL.g[x.g]||'?'}・${esc(LABEL.a[x.a]||'?')}<span class="pill p-${esc(x.r)}">${LABEL.r[x.r]||'?'}</span>${extra?'<br><small>'+esc(extra)+'</small>':''}</span>
+        <button class="del" data-id="${esc(x.id)}">刪除</button></div>`;
+    }).join('');
+  }
+  $('#todayList').addEventListener('click', e => {
+    const b = e.target.closest('.del'); if (!b) return;
+    if (!b.classList.contains('armed')){
+      b.classList.add('armed'); b.textContent = '確定刪除';
+      setTimeout(() => { if (b.isConnected){ b.classList.remove('armed'); b.textContent = '刪除'; } }, 3000);
+      return;
+    }
+    removeItem(b.dataset.id);
+  });
+
+  function inRange(){
+    if (!rangeDays) return items.slice();
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (rangeDays-1));
+    return items.filter(x => x.t >= d.getTime());
+  }
+  function breakdown(title, list, field, opts, withRate, note){
+    const rows = opts.map(([v,l]) => {
+      const g = list.filter(x => x[field] === v);
+      const rec = g.filter(x => x.r !== 'skip');
+      return {v, l, n:g.length, rate: withRate ? pct(rec.filter(x => x.r === 'yes').length, rec.length) : null};
+    });
+    const max = Math.max(1, ...rows.map(r => r.n));
+    const warn = v => (field === 'r' && v === 'no') || field === 'why';
+    return `<div class="card"><h3>${title}${note?'<small>'+note+'</small>':''}</h3>` + rows.map(r =>
+      `<div class="bar"><span class="lab">${esc(r.l)}</span><span class="track"><span class="fill${warn(r.v)?' w':''}" style="width:${r.n/max*100}%"></span></span>
+       <span class="n">${r.n}</span><span class="pct${r.rate===null||r.rate==='–'?' na':''}">${r.rate===null?'':r.rate}</span></div>`).join('') + '</div>';
+  }
+  function paintStats(){
+    const list = inRange();
+    const rec = list.filter(x => x.r !== 'skip'), y = list.filter(x => x.r === 'yes').length;
+    $('#sN').textContent = list.length; $('#sP').textContent = rec.length; $('#sR').textContent = pct(y, rec.length);
+    const hours = []; for (let h = 8; h <= 22; h++) hours.push([String(h), pad(h)+':00']);
+    const withH = list.map(x => Object.assign({}, x, {h:String(new Date(x.t).getHours())}));
+    const refused = list.filter(x => x.r === 'no');
+    $('#cards').innerHTML =
+      breakdown('推薦結果', list, 'r', OPTS.r, false) +
+      breakdown('性別', list, 'g', OPTS.g, true, '人數｜下載率') +
+      breakdown('年齡', list, 'a', OPTS.a, true, '人數｜下載率') +
+      breakdown('來店目的', list, 'p', OPTS.p, true, '人數｜下載率') +
+      breakdown('拒絕原因', refused, 'why', OPTS.why, false, '共 '+refused.length+' 位拒絕') +
+      breakdown('時段', withH, 'h', hours, true, '找出適合推薦的空檔');
+  }
+  $('#range').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    rangeDays = Number(b.dataset.d);
+    $('#range').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    paintStats();
+  });
+  function setTab(stats){
+    $('#tab-log').setAttribute('aria-selected', String(!stats));
+    $('#tab-stats').setAttribute('aria-selected', String(stats));
+    $('#view-log').hidden = stats; $('#view-stats').hidden = !stats; $('#savebar').hidden = stats;
+    if (stats) paintStats();
+  }
+  $('#tab-log').onclick = () => setTab(false);
+  $('#tab-stats').onclick = () => setTab(true);
+
+  function paintAll(){ paintForm(); paintToday(); paintSync(); if (!$('#view-stats').hidden) paintStats(); }
+
+  paintAll();
+  if (!cfg) showSetup(); else sync();
+})();
+</script>
+</body>
+</html>
