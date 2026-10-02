@@ -119,8 +119,8 @@ header.top .date{color:var(--muted);font-size:13px;display:flex;gap:8px;align-it
 .setup .btns{display:flex;gap:8px}
 .setup .btns .save{min-height:48px;font-size:16px}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 8px 10px 16px;border-radius:999px;display:flex;align-items:center;gap:10px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.2);max-width:calc(100% - 32px)}
-.toast button{border:0;background:var(--gold);color:#1a1405;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 8px 10px 16px;border-radius:999px;display:flex;align-items:center;gap:10px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.2);max-width:calc(100% - 32px);white-space:nowrap}
+.toast button{flex:none;border:0;background:var(--gold);color:#1a1405;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.chip:active,.save:active{transform:scale(.97)}}
 </style>
 </head>
